@@ -47,10 +47,14 @@ function variable_list_names_idxs()
   decoded_response = variable_list()
   result = decoded_response["result"]
   variables = {}
+  ivariables = {}
   for i = 1, #result do
     record = result[i]
     if type(record) == "table" then
-      variables[record['Name']] = record['idx']
+      ridx = record['idx']
+      rname = record['Name']
+      variables[rname] = ridx
+      ivariables[ridx] = rname
     end
   end
   return variables
@@ -126,25 +130,34 @@ function device_list_names_idxs(DeviceType)
   result = decoded_response['result']
   if result ~= nil then
     devices = {}
-    devicesproperties = {}
+    idevices = {}
+    dprops = {}
     for i = 1, #result do
       record = result[i]
-      if type(record) == "table" then
-        if DeviceType == "plans" then
-          devices[record['Name']] = record['idx']
-        else
-          devices[string.lower(record['Name'])] = record['idx']
-          devices[record['idx']] = record['Name']
-          if DeviceType == 'scenes' then
-            devicesproperties[record['idx']] = {Type=record['Type'], SwitchType = record['Type']}
-          end
+      ridx = record['idx']
+      rname = record['Name']
+      devices[string.lower(rname)] = ridx
+      idevices[ridx] = rname
+      dprops[ridx] = {}
+      if DeviceType == 'devices' then
+        dprops[ridx].Type = record.Type
+        if record.SwitchType ~= nil then
+          dprops[ridx].SwitchType=record.SwitchType
         end
+        if record.MaxDimLevel ~= nil then
+          dprops[ridx].MaxDimLevel=record.MaxDimLevel
+        end
+        dprops[ridx].status = tostring(record.Status)
+      end
+      if DeviceType == 'scenes' then
+        dprops[ridx].Type=record.Type
+        dprops[ridx].SwitchType=record.Type
       end
     end
-    return devices, devicesproperties
+    return devices,idevices,dprops
   else
     print_to_log(0,'device_list_names_idxs',DeviceType,'No items returned from Domoticz')
-    return nil, nil
+    return nil, nil, nil
   end
 end
 
@@ -155,8 +168,9 @@ function idx_from_name(DeviceName,DeviceType)
   elseif DeviceType == "scenes" then
     return Scenelist[string.lower(DeviceName)]
   else
-    return Roomlist[DeviceName]
+    return Roomlist[string.lower(DeviceName)]
   end
+  return -9999
 end
 
 -- returns the status of a device based on idx
@@ -225,12 +239,12 @@ function devinfo_from_name(idx,DeviceName,DeviceScene)
       DeviceName = idx_from_name(idx,'scenes')
     end
     if idx ~= nil then
-      DeviceName = Scenelist[idx]
+      DeviceName = iScenelist[idx]
       DeviceType="scenes"
       ridx = idx
       rDeviceName = DeviceName
-      SwitchType = Sceneproperties[tostring(idx)]['SwitchType']
-      Type = Sceneproperties[tostring(idx)]['Type']
+      SwitchType = Sceneproperties[idx]['SwitchType']
+      Type = Sceneproperties[idx]['Type']
       found = 1
     end
   end

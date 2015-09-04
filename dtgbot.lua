@@ -88,6 +88,16 @@ StoredList = {}
 -- Table to store functions for commands plus descriptions used by help function
 commands = {};
 
+Devicelist = {}
+iDevicelist = {}
+Deviceproperties = {}
+Scenelist = {}
+iScenelist = {}
+Sceneproperties ={}
+Roomlist = {}
+iRoomlist = {}
+Variablelist = {}
+
 -- Load necessary Lua libraries
 http = require "socket.http";
 socket = require "socket";
@@ -169,28 +179,29 @@ end
 
 -- initialise room, device, scene and variable list from Domoticz
 function dtgbot_initialise()
+  print('Initialising')
   Variablelist = variable_list_names_idxs()
   if Variablelist == nil then
     print_to_log(0,'No Variables defined in Domoticz - exiting')
     os.exit()
   end
-  Devicelist = device_list_names_idxs("devices")
+  Devicelist,iDevicelist,Deviceproperties = device_list_names_idxs("devices")
   if Devicelist == nil then
     print_to_log(0,'No Devices defined in Domoticz - exiting')
     os.exit()
   end
-  Scenelist, Sceneproperties = device_list_names_idxs("scenes")
-  Roomlist = device_list_names_idxs("plans")
+  Scenelist, iScenelist, Sceneproperties = device_list_names_idxs("scenes")
+  Roomlist, iRoomlist = device_list_names_idxs("plans")
 
 -- Get language from Domoticz
   language = domoticz_language()
 
 -- get the required loglevel
-  dtgbotLogLevelidx = idx_from_variable_name("TelegramBotLoglevel")
+  dtgbotLogLevelidx = idx_from_variable_name("TelegramBotLogLevel")
   if dtgbotLogLevelidx ~= nil then
     dtgbotLogLevel = tonumber(get_variable_value(dtgbotLogLevelidx))
     if dtgbotLogLevel == nil then
-      dtgbotLogLevel=0
+      dtgbotLogLevel=2
     end
   end
 
@@ -208,13 +219,14 @@ function dtgbot_initialise()
     end
   end
 
+--Move to dtgmenu
   -- Initialise and populate dtgmenu tables in case the menu is switched on
   Menuidx = idx_from_variable_name("TelegramBotMenu")
   if Menuidx ~= nil then
     Menuval = get_variable_value(Menuidx)
     if Menuval == "On" then
-      -- initialise
-      -- define the menu table and initialize the table first time
+  -- initialise
+  -- define the menu table and initialize the table first time
       PopulateMenuTab(1,"")
     end
   end
@@ -265,39 +277,15 @@ function HandleCommand(cmd, SendTo, Group, MessageId)
 --  end
   local found=0
 
-  ---------------------------------------------------------------------------
-  -- Change for menu.lua option
-  -- When LastCommand starts with menu then assume the rest is for menu.lua
-  ---------------------------------------------------------------------------
-  if Menuval == "On" then
-    print_to_log(0,"dtgbot: Start DTGMENU ...", cmd)
-    local menu_cli = {}
-    table.insert(menu_cli, "")  -- make it compatible
-    table.insert(menu_cli, cmd)
-    -- send whole cmd line instead of first word
-    command_dispatch = commands["dtgmenu"];
-    status, text, replymarkup, cmd = command_dispatch.handler(menu_cli,SendTo);
-    if status ~= 0 then
-      -- stop the process when status is not 0
-      if text ~= "" then
-        while string.len(text)>0 do
-          if Group ~= "" then
-            send_msg(Group,string.sub(text,1,4000),MessageId,replymarkup)
-          else
-            send_msg(SendTo,string.sub(text,1,4000),MessageId,replymarkup)
-          end
-          text = string.sub(text,4000,-1)
-        end
-      end
-      print_to_log(0,"dtgbot: dtgmenu ended and text send ...return:"..status)
-      -- no need to process anything further
-      return 1
+-- Modules can set a preprocess command which is executed here
+  if preprocess ~= nil then
+    status, cmd, replymarkup = preprocess(cmd, SendTo, Group, MessageId)
+print_to_log(0,'command returned',cmd, replymarkup)    
+    -- Preprocess has completed command so finish
+    if status == 1 then
+      return status
     end
-    print_to_log(0,"dtgbot:continue regular processing. cmd =>",cmd)
   end
-  ---------------------------------------------------------------------------
-  -- End change for menu.lua option
-  ---------------------------------------------------------------------------
 
   --~	added "-_"to allowed characters a command/word
   for w in string.gmatch(cmd, "([%w-_]+)") do

@@ -433,6 +433,7 @@ function MakeRoomMenus(iLevel,iSubmenu)
               print_to_log(1,"--> device record")
               idx,DeviceName,DeviceType,Type,SwitchType,MaxDimLevel,status = devinfo_from_name(idx,"","devices")
             end
+print_to_log('Device anem',DeviceName,room_name)            
             -- Remove the name of the room from the device if it is present and any susequent Space or Hyphen or undersciore
             button = string.gsub(DeviceName,room_name.."[%s-_]*","")
             -- But reinstate it if lees than 2 letters are left
@@ -576,6 +577,9 @@ function dtgmenu_module.handler(menu_cli,SendTo)
     end
     response="DTGMENU is currently "..Menuval
     if Menuval == "On" and (lparam1 == "off" or lparam1 == "") then
+      
+      preprocess = nil
+      
       print_to_log(0, " Set DTGMENU Off")
       response="DTGMENU is now disabled. send DTGMENU to start the menus again."
       replymarkup='{"hide_keyboard":true}'
@@ -583,6 +587,12 @@ function dtgmenu_module.handler(menu_cli,SendTo)
       LastCommand[SendTo]["replymarkup"]=""
       Menuval = "Off"
     elseif Menuval == "Off" and (lparam1 == "on" or lparam1 == "") then
+          
+          
+          preprocess = preprocess_menu
+
+
+
       print_to_log(0, " Set DTGMENU On")
       if Menuidx == nil then
         create_variable("TelegramBotMenu",2,"On")
@@ -914,6 +924,47 @@ end
 --- END the main process handler
 -----------------------------------------------
 
+-- Move from dtgbot
+function preprocess_menu(cmd, SendTo, Group, MessageId)
+  ---------------------------------------------------------------------------
+  -- Change for menu.lua option
+  -- When LastCommand starts with menu then assume the rest is for menu.lua
+  ---------------------------------------------------------------------------
+  if Menuval == "On" then
+    print_to_log(0,"dtgbot: Start DTGMENU ...", cmd)
+    -- Set up preprocess function for dtgbot
+    preprocess = preprocess_menu
+    local menu_cli = {}
+    table.insert(menu_cli, "")  -- make it compatible
+    table.insert(menu_cli, cmd)
+    -- send whole cmd line instead of first word
+    command_dispatch = commands["dtgmenu"];
+    status, text, replymarkup, cmd = command_dispatch.handler(menu_cli,SendTo);
+    if status ~= 0 then
+      -- stop the process when status is not 0
+      if text ~= "" then
+        while string.len(text)>0 do
+          if Group ~= "" then
+            send_msg(Group,string.sub(text,1,4000),MessageId,replymarkup)
+          else
+            send_msg(SendTo,string.sub(text,1,4000),MessageId,replymarkup)
+          end
+          text = string.sub(text,4000,-1)
+        end
+      end
+      print_to_log(0,"dtgbot: dtgmenu ended and text send ...return:"..status)
+      -- no need to process anything further
+      return 1
+    end
+    print_to_log(0,"dtgbot:continue regular processing. cmd =>",cmd)
+  end
+  ---------------------------------------------------------------------------
+  -- End change for menu.lua option
+  ---------------------------------------------------------------------------
+  return status, cmd, replymarkup
+end
+
+
 local dtgmenu_commands = {
   ["dtgmenu"] = {handler=dtgmenu_module.handler, description="DTGMENU (will toggle On/Off) to start/stop the menu functionality."},
 }
@@ -928,5 +979,15 @@ Menuval="Off"
 dtgmenu_submenus = {}
 --~ PopulateMenuTab(1,"")  -- now done in refresh
 
+-- Initialise and populate dtgmenu tables in case the menu is switched on
+--Menuidx = idx_from_variable_name("TelegramBotMenu")
+--if Menuidx ~= nil then
+--  Menuval = get_variable_value(Menuidx)
+--  if Menuval == "On" then
+    -- initialise
+    -- define the menu table and initialize the table first time
+--    PopulateMenuTab(1,"")
+--  end
+--end
 
 return dtgmenu_module;
