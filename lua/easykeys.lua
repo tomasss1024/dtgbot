@@ -2,11 +2,11 @@
 -- =====================================================================================================================
 -- Menu script which enables the option in TG BOT to use a reply keyboard to perform actions on:
 --  - all defined devices per defined ROOM in Domotics.
---  - all static actions defined in easykeys.cfg Open the file for descript of the details.
+--  - all static actions defined in user variable in Domoticz
 --
 -- programmer: Simon Gibbon
--- based on initial work of Jos van der Zande
--- version: 0.1.150824
+-- builds on approach of Jos van der Zande in dtgmenu
+-- version: 0.2.150907
 -- =====================================================================================================================
 -----------------------------------------------------------------------------------------------------------------------
 -- these are the different formats of reply_markup. looksimple but needed a lot of testing before it worked :)
@@ -67,8 +67,8 @@ function create_replymarkup(keyboard)
 end
 
 function create_roombuttons()
-    local room_number = 0
-    local room_buttonlist = {}
+  local room_number = 0
+  local room_buttonlist = {}
   if Roomlist ~= nil then
     print_to_log(0,"Creating Room Buttons")
     ------------------------------------
@@ -130,27 +130,65 @@ function create_roombuttons()
   end
 end
 
+function create_keys_from_variable(vname, vidx)
+  local keyboardtext = get_variable_value(vidx)
+  local keytexts = get_names_from_variable(keyboardstext)
+  for i = 1, #keytexts do
+    keytext = keytexts[i]
+    --Extract key name
+    local keyname = string.match(keytext,"[^#]+")
+    --Extract key command
+    local keycommand = string.match(keytext,"[^"..keyname.."#]+")
+    if keycommand == "menu" then
+    else
+      
+    end  
+  end
+  return
+end
+
+function easykeys_initialiser()
+  -- Check to see if any keyboards are set up in Domoticz
+  my_keys = {}
+  -- Search variable list
+  for vname, vidx in Variablelist do
+    if vname:match("MyKeys.*") then
+      my_keys{vname} = vidx
+      create_keys_from_variable(vname, vidx)
+    end
+  end
+
+
+end
+
 function easykeys_module.handler(parsed_cli,SendTo)
-  roffset = 0
-  soffset = 100
-  doffset = 500
-  moffset = 5000
-  aoffset = 5500
+  roffset = 0 -- room offset
+  soffset = 100 -- scene offset
+  doffset = 500 -- device offset
+  moffset = 5000 -- menu offset
+  aoffset = 5500 -- action offset
+  foffset = 6000 -- fixed offset for used defined
+  fcurrent = foffset
+
   buttons = {}
   current_keyboard = {}
   command = parsed_cli[2]
   awaiting_input = false
   response = ""
-  -- menu control
+  -- keyboard control
   if string.lower(command) == 'easykeys' then
     if parsed_cli[3] == 'on' then
+      -- Currently no initialiser routine for easykeys
+      preprocess_initaliser = easykeys_initialiser
       -- Set up the preprocess function which will intercept commands in dtgbot
-      preprocess = preprocess_keys
+      preprocess = preprocess_keys      
+      -- Automatically collect all the room information
       room_buttonlist = create_roombuttons()
       print_to_log(0,'here')
-      current_keyboard = buildmenukeys(room_buttonlist,1)
       -- Create the home key button
       buttons[moffset] = {moffset,"Home",room_buttonlist}
+      -- Build home keyboard
+      current_keyboard = buildmenukeys(room_buttonlist,1)
       -- Create the home key keyboard item
       home_key = {idx = moffset, type = 'menu', level = 0}
       -- Add home key
@@ -158,7 +196,7 @@ function easykeys_module.handler(parsed_cli,SendTo)
       replymarkup = create_replymarkup(current_keyboard)
     else
       if parsed_cli[3] == 'off' then
-        -- Turn of the preprocess function
+        -- Turn off the preprocess function
         preprocess = nil
         -- remove custom keyboard
         replymarkup = ''
@@ -195,7 +233,7 @@ function builddevicekeys(bidx, levelkeys)
     i = i + 1
     local currentidx = aoffset + i
     currenttype = 'action'
-      currentlevel = levelkeys
+    currentlevel = levelkeys
     if keytext == '?' then
       buttons[currentidx] = {idx, keytext, 'Set Level ??? '..devicename}
       currenttype = 'input'
@@ -283,8 +321,8 @@ function preprocess_keys(cmd, SendTo, Group, MessageId)
         new_keyboard = buildmenukeys(buttons[record.idx][3])
         current_keyboard = new_keyboard
         -- Add home key
-      current_keyboard[1+#current_keyboard] = home_key
-      replymarkup = create_replymarkup(current_keyboard)
+        current_keyboard[1+#current_keyboard] = home_key
+        replymarkup = create_replymarkup(current_keyboard)
         send_msg(SendTo,'Its a menu',MessageId,replymarkup)
         -- Return 1 so dtgbot does nothing more
         return 1, "", record.replymarkup
@@ -293,9 +331,9 @@ function preprocess_keys(cmd, SendTo, Group, MessageId)
         -- Create the options and return 1 so dtgbot does nothing more
         new_keyboard = builddevicekeys(record.idx,3)
         current_keyboard = new_keyboard
-      -- Add home key
-      current_keyboard[1+#current_keyboard] = home_key
-      replymarkup = create_replymarkup(current_keyboard)
+        -- Add home key
+        current_keyboard[1+#current_keyboard] = home_key
+        replymarkup = create_replymarkup(current_keyboard)
         send_msg(SendTo,'Its a device',MessageId,replymarkup)
         return 1, "", replymarkup
       end

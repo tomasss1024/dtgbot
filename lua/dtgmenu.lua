@@ -505,6 +505,20 @@ end
 --- END Misc Function to support the process
 -----------------------------------------------
 
+function initialiser_menu()
+  -- Initialise and populate dtgmenu tables in case the menu is switched on
+  Menuidx = idx_from_variable_name("TelegramBotMenu")
+  if Menuidx ~= nil then
+    Menuval = get_variable_value(Menuidx)
+    if Menuval == "On" then
+  -- initialise
+  -- define the menu table and initialize the table first time
+      PopulateMenuTab(1,"")
+    end
+  end
+  return
+end
+
 -----------------------------------------------
 --- START the main process handler
 -----------------------------------------------
@@ -579,6 +593,7 @@ function dtgmenu_module.handler(menu_cli,SendTo)
     if Menuval == "On" and (lparam1 == "off" or lparam1 == "") then
       
       preprocess = nil
+      preprocess_initialiser = nil
       
       print_to_log(0, " Set DTGMENU Off")
       response="DTGMENU is now disabled. send DTGMENU to start the menus again."
@@ -590,6 +605,7 @@ function dtgmenu_module.handler(menu_cli,SendTo)
           
           
           preprocess = preprocess_menu
+          preprocess_initialiser = initialiser_menu
 
 
 

@@ -219,17 +219,22 @@ function dtgbot_initialise()
     end
   end
 
---Move to dtgmenu
+
+  if preprocess_initialiser ~= nil then
+    preprocess_initialiser()
+  end
+
+--Moved to dtgmenu - initialiser_menu
   -- Initialise and populate dtgmenu tables in case the menu is switched on
-  Menuidx = idx_from_variable_name("TelegramBotMenu")
-  if Menuidx ~= nil then
-    Menuval = get_variable_value(Menuidx)
-    if Menuval == "On" then
+--  Menuidx = idx_from_variable_name("TelegramBotMenu")
+--  if Menuidx ~= nil then
+--    Menuval = get_variable_value(Menuidx)
+--    if Menuval == "On" then
   -- initialise
   -- define the menu table and initialize the table first time
-      PopulateMenuTab(1,"")
-    end
-  end
+--      PopulateMenuTab(1,"")
+--    end
+--  end
 
 -- Retrieve id white list
   WLidx = idx_from_variable_name(WLName)
@@ -280,7 +285,7 @@ function HandleCommand(cmd, SendTo, Group, MessageId)
 -- Modules can set a preprocess command which is executed here
   if preprocess ~= nil then
     status, cmd, replymarkup = preprocess(cmd, SendTo, Group, MessageId)
-print_to_log(0,'command returned',cmd, replymarkup)    
+    print_to_log(0,'command returned',cmd, replymarkup)    
     -- Preprocess has completed command so finish
     if status == 1 then
       return status
@@ -527,10 +532,16 @@ end
 TelegramBotOffset=get_variable_value(TBOidx)
 print_to_log(1,'TBO '..TelegramBotOffset)
 print_to_log(1,telegram_url)
+--To account for telegram server issues
+telegram_connected = true
 --while TelegramBotOffset do
 while file_exists(dtgbot_pid) do
   response, status = https.request(telegram_url..'getUpdates?timeout=60&offset='..TelegramBotOffset)
   if status == 200 then
+    if not telegram_connected then
+      print_to_log(0,'Back to contact with Telegram servers')
+      telegram_connected = true
+    end
     if response ~= nil then
       io.write('.')
       print_to_log(1,response)
@@ -551,6 +562,13 @@ while file_exists(dtgbot_pid) do
       end
     else
       print_to_log(2,'Updates retrieved',status)
+    end
+  else
+    if telegram_connected then
+      print_to_log(0,'Lost contact with Telegram servers')
+      print_to_log(0,'Sending request',telegram_url..'getUpdates?timeout=60&offset='..TelegramBotOffset)
+      print_to_log(0,'Non 200 status - returned - ',status)
+      telegram_connected = false
     end
   end
 end
