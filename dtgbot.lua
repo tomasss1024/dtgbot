@@ -533,14 +533,33 @@ TelegramBotOffset=get_variable_value(TBOidx)
 print_to_log(1,'TBO '..TelegramBotOffset)
 print_to_log(1,telegram_url)
 --To account for telegram server issues
-telegram_connected = true
+print_to_log(0,'Getting idx of TelegramConnection from Domoticz')
+TelegramConnectionID = idx_from_name("TelegramConnection",'devices')
+if TelegramConnectionID == nil then
+  print_to_log(0,'TelegramConnection switch does not exist in Domoticz so can not continue')
+  os.exit()
+else
+  print_to_log(1,'TelegramConnectionID '..TelegramConnectionID)
+end
+--ridx,rDeviceName,DeviceType,Type,SwitchType,MaxDimLevel,status
+-- Check previous TelegramConnection status
+t1,t2,t3,t4,t5,t6,TelegramCurrent = devinfo_from_name(TelegramConnectionID, 'TelegramConnection', 'devices')
+print(TelegramCurrent)
+if TelegramCurrent == 'On' then
+  telegram_connected = true
+else
+  telegram_connected = false
+end
+--respone = SwitchID('TelegramConnection', TelegramConnectionID, 'light', 'on', 100, 12345)
+--TelegramStatus=get_variable_value(TBSidx)
 --while TelegramBotOffset do
 while file_exists(dtgbot_pid) do
   response, status = https.request(telegram_url..'getUpdates?timeout=60&offset='..TelegramBotOffset)
   if status == 200 then
     if not telegram_connected then
-      print_to_log(0,'Back to contact with Telegram servers')
+      print_to_log(0,'In contact with Telegram servers')
       telegram_connected = true
+      respone = SwitchID('TelegramConnection', TelegramConnectionID, 'light', 'on', 100, 12345)
     end
     if response ~= nil then
       io.write('.')
@@ -569,6 +588,7 @@ while file_exists(dtgbot_pid) do
       print_to_log(0,'Sending request',telegram_url..'getUpdates?timeout=60&offset='..TelegramBotOffset)
       print_to_log(0,'Non 200 status - returned - ',status)
       telegram_connected = false
+      respone = SwitchID('TelegramConnection', TelegramConnectionID, 'light', 'off', 100, 12345)
     end
   end
 end
