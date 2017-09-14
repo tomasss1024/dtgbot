@@ -243,6 +243,7 @@ end
 
 function HandleCommand(cmd, SendTo, Group, MessageId)
   print_to_log(0,"Handle command function started with " .. cmd .. " and " .. SendTo)
+  send_typing(SendTo)
   --- parse the command
   if command_prefix == "" then
     -- Command prefix is not needed, as can be enforced by Telegram api directly
@@ -372,6 +373,13 @@ function send_msg(SendTo, Message, MessageId, replymarkup)
     response, status = https.request(telegram_url..'sendMessage?chat_id='..SendTo..'&reply_to_message_id='..MessageId..'&text='..url_encode(Message)..'&reply_markup='..url_encode(replymarkup))
   end
   print_to_log(0,'Message sent',status)
+  return
+end
+
+function send_typing(SendTo)
+  print_to_log(1,telegram_url..'sendChatAction?chat_id='..SendTo..'&action=typing')
+  response, status = https.request(telegram_url..'sendChatAction?chat_id='..SendTo..'&action=typing')
+  print_to_log(0,'Typing ..',status)
   return
 end
 
