@@ -26,7 +26,7 @@ function list_module.handler(parsed_cli)
 		print_to_log(k, type(record))
 		if type(record) == "table" then
 			for k1, v1 in pairs(record) do
-				if string.find(string.lower(v1.Type), match_type) then
+				if string.find(string.lower(v1.Type), match_type) or string.find(string.lower(v1.Name), match_type) then
 					response = response..list_device_attr(v1, mode).."\n";
 				end
 --				print_to_log(k1, v1)
