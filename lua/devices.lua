@@ -20,17 +20,18 @@ function DevicesScenes(DeviceType, qualifier)
   for k,record in pairs(result) do
     if type(record) == "table" then
       DeviceName = record['Name']
+      DeviceData = record['Data']
       -- Don't bother to store Unknown devices
       if DeviceName ~= "Unknown" then 
         if qualifier ~= nil then   
           --if qualifier == string.lower(string.sub(DeviceName,1,quallength)) then
           if string.find(string.lower(DeviceName),qualifier) ~= nil then
             ItemNumber = ItemNumber + 1
-            table.insert(StoredList, DeviceName)
+            table.insert(StoredList, DeviceName..':'..DeviceData)
           end
         else
           ItemNumber = ItemNumber + 1
-          table.insert(StoredList, DeviceName)
+          table.insert(StoredList, DeviceName..':'..DeviceData)
         end
       end
     end
