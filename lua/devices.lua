@@ -6,8 +6,8 @@ function DevicesScenes(DeviceType, qualifier)
   local response = "", ItemNumber, result, decoded_response, record, k;
         print_to_log(qualifier)
   if qualifier ~= nil then   
-    response = 'All '..DeviceType..' starting with '..qualifier
-    qaulifier = string.lower(qualifier)
+    response = 'All '..DeviceType..' contains '..qualifier
+    qualifier = string.lower(qualifier)
     quallength = string.len(qualifier)
   else
     response = 'All available '..DeviceType
@@ -23,7 +23,8 @@ function DevicesScenes(DeviceType, qualifier)
       -- Don't bother to store Unknown devices
       if DeviceName ~= "Unknown" then 
         if qualifier ~= nil then   
-          if qualifier == string.lower(string.sub(DeviceName,1,quallength)) then
+          --if qualifier == string.lower(string.sub(DeviceName,1,quallength)) then
+          if string.find(string.lower(DeviceName),qualifier) ~= nil then
             ItemNumber = ItemNumber + 1
             table.insert(StoredList, DeviceName)
           end
